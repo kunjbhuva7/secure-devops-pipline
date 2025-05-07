@@ -10,7 +10,14 @@ pipeline {
     stages {
         stage('Clone') {
             steps {
-                git 'https://github.com/kunjbhuva7/secure-devops-pipline.git'
+                script {
+                    // Fetch all branches and updates before checking out the main branch
+                    sh 'git fetch --all'
+                    // Checkout to main branch explicitly to avoid any issues
+                    sh 'git checkout main'
+                    // Ensure the correct repository is being used and latest code is fetched
+                    git url: 'https://github.com/kunjbhuva7/secure-devops-pipline.git', branch: 'main'
+                }
             }
         }
 
@@ -71,7 +78,16 @@ pipeline {
 
     post {
         always {
+            // Archive the reports and logs, even if the build fails
             archiveArtifacts artifacts: '**/*.txt, **/reports/**', allowEmptyArchive: true
+        }
+        success {
+            // Send a success notification, if needed
+            echo 'Build was successful!'
+        }
+        failure {
+            // Send a failure notification, if needed
+            echo 'Build failed!'
         }
     }
 }
