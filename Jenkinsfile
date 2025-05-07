@@ -2,6 +2,8 @@ pipeline {
     agent any
 
     environment {
+	SONAR_SCANNER_HOME = '/opt/sonar-scanner'
+   	PATH = "${env.PATH}:${env.SONAR_SCANNER_HOME}/bin"
         SONAR_TOKEN = credentials('01')
         SONAR_HOST_URL = 'http://localhost:9000'
         DOCKER_IMAGE = 'kunj22/secure-app'
