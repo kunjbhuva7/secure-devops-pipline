@@ -32,7 +32,7 @@ pipeline {
                         -Dsonar.sources=. \
                         -Dsonar.login=${SONAR_TOKEN} \
                         -Dsonar.host.url=${SONAR_HOST_URL}
-                    ''' 
+                    '''
                 }
             }
         }
@@ -49,7 +49,7 @@ pipeline {
             }
         }
 
-	stage('Trivy Scan') {
+        stage('Trivy Scan') {
             steps {
                 script {
                     echo "Running Trivy Scan on Docker image"
@@ -101,12 +101,49 @@ pipeline {
             archiveArtifacts artifacts: '**/*.txt, **/reports/**', allowEmptyArchive: true
         }
         success {
-            // Send a success notification, if needed
-            echo 'Build was successful!'
+            script {
+                // Send success email with green color
+                emailext (
+                    subject: "SUCCESS: Jenkins Pipeline - ${currentBuild.fullDisplayName}",
+                    body: '''<html>
+                        <body>
+                            <h2 style="color: green;">Success!</h2>
+                            <p>The Jenkins pipeline <strong>${currentBuild.fullDisplayName}</strong> has successfully completed.</p>
+                        </body>
+                    </html>''',
+                    to: 'kunjbhuva301@gmail.com'
+                )
+            }
         }
         failure {
-            // Send a failure notification, if needed
-            echo 'Build failed!'
+            script {
+                // Send failure email with red color
+                emailext (
+                    subject: "FAILURE: Jenkins Pipeline - ${currentBuild.fullDisplayName}",
+                    body: '''<html>
+                        <body>
+                            <h2 style="color: red;">Failure!</h2>
+                            <p>The Jenkins pipeline <strong>${currentBuild.fullDisplayName}</strong> has failed. Please check the logs for more details.</p>
+                        </body>
+                    </html>''',
+                    to: 'kunjbhuva301@gmail.com'
+                )
+            }
+        }
+        unstable {
+            script {
+                // Send unstable email with pink color
+                emailext (
+                    subject: "UNSTABLE: Jenkins Pipeline - ${currentBuild.fullDisplayName}",
+                    body: '''<html>
+                        <body>
+                            <h2 style="color: pink;">Unstable!</h2>
+                            <p>The Jenkins pipeline <strong>${currentBuild.fullDisplayName}</strong> is unstable. Please check the logs for more details.</p>
+                        </body>
+                    </html>''',
+                    to: 'kunjbhuva301@gmail.com'
+                )
+            }
         }
     }
 }
