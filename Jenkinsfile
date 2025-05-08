@@ -49,9 +49,20 @@ pipeline {
             }
         }
 
-        stage('Trivy Scan') {
+	stage('Trivy Scan') {
             steps {
-                sh 'trivy image $DOCKER_IMAGE > trivy-report.txt || true'  // Scan Docker image with Trivy and save report
+                script {
+                    echo "Running Trivy Scan on Docker image"
+                    // Run Trivy Scan and save output to a report file
+                    sh 'trivy image $DOCKER_IMAGE > trivy-report.txt || true'
+                }
+            }
+        }
+
+        stage('Archive Trivy Report') {
+            steps {
+                // Save Trivy report as an artifact
+                archiveArtifacts artifacts: 'trivy-report.txt', allowEmptyArchive: true
             }
         }
 
