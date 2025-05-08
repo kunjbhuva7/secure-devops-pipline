@@ -1,6 +1,6 @@
 projectKey=devsecops-pipeline
 serverUrl=http://localhost:9000
-serverVersion=25.4.0.105899
+serverVersion=25.5.0.107428
 dashboardUrl=http://localhost:9000/dashboard?id=devsecops-pipeline
-ceTaskId=a2b7934c-18a8-48f8-ad59-014a6908a729
-ceTaskUrl=http://localhost:9000/api/ce/task?id=a2b7934c-18a8-48f8-ad59-014a6908a729
+ceTaskId=c007f3cd-4111-4188-b027-75ba76151759
+ceTaskUrl=http://localhost:9000/api/ce/task?id=c007f3cd-4111-4188-b027-75ba76151759
