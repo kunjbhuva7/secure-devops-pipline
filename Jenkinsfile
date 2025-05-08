@@ -4,7 +4,7 @@ pipeline {
     environment {
         SONAR_SCANNER_HOME = '/opt/sonar-scanner'
         PATH = "${env.PATH}:${env.SONAR_SCANNER_HOME}/bin"
-        SONAR_TOKEN = credentials('01')  // The ID of the SonarQube token in Jenkins credentials
+        SONAR_TOKEN = credentials('01')
         SONAR_HOST_URL = 'http://localhost:9000'  // URL of your SonarQube instance
         DOCKER_IMAGE = 'kunj22/secure-app'
     }
