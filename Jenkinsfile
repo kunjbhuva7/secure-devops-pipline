@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-	SONAR_SCANNER_HOME = '/opt/sonar-scanner'
-   	PATH = "${env.PATH}:${env.SONAR_SCANNER_HOME}/bin"
-        SONAR_TOKEN = credentials('01')
-        SONAR_HOST_URL = 'http://localhost:9000'
+        SONAR_SCANNER_HOME = '/opt/sonar-scanner'
+        PATH = "${env.PATH}:${env.SONAR_SCANNER_HOME}/bin"
+        SONAR_TOKEN = credentials('01')  // The ID of the SonarQube token in Jenkins credentials
+        SONAR_HOST_URL = 'http://localhost:9000'  // URL of your SonarQube instance
         DOCKER_IMAGE = 'kunj22/secure-app'
     }
 
@@ -17,7 +17,7 @@ pipeline {
                     sh 'git fetch --all'
                     // Checkout to main branch explicitly to avoid any issues
                     sh 'git checkout main'
-                    // Ensure the correct repository is being used and latest code is fetched
+                    // Ensure the correct repository is being used and the latest code is fetched
                     git url: 'https://github.com/kunjbhuva7/secure-devops-pipline.git', branch: 'main'
                 }
             }
@@ -25,8 +25,14 @@ pipeline {
 
         stage('SonarQube') {
             steps {
-                withSonarQubeEnv('MySonarQube') {
-                    sh 'sonar-scanner'
+                withSonarQubeEnv('MySonarQube') { // Use the SonarQube server configured in Jenkins
+                    sh '''
+                        sonar-scanner \
+                        -Dsonar.projectKey=secure-app \
+                        -Dsonar.sources=. \
+                        -Dsonar.login=${SONAR_TOKEN} \
+                        -Dsonar.host.url=${SONAR_HOST_URL}
+                    ''' 
                 }
             }
         }
@@ -45,13 +51,13 @@ pipeline {
 
         stage('Trivy Scan') {
             steps {
-                sh 'trivy image $DOCKER_IMAGE > trivy-report.txt || true'
+                sh 'trivy image $DOCKER_IMAGE > trivy-report.txt || true'  // Scan Docker image with Trivy and save report
             }
         }
 
         stage('Terraform Validate') {
             steps {
-                dir('terraform') {
+                dir('terraform') { // Run Terraform commands inside the 'terraform' directory
                     sh 'terraform init'
                     sh 'terraform validate'
                 }
@@ -60,7 +66,7 @@ pipeline {
 
         stage('tfsec Scan') {
             steps {
-                dir('terraform') {
+                dir('terraform') { // Run tfsec to scan the Terraform code for security issues
                     sh 'tfsec . > tfsec-report.txt || true'
                 }
             }
@@ -70,8 +76,8 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     sh '''
-                        echo "$PASS" | docker login -u "$USER" --password-stdin
-                        docker push $DOCKER_IMAGE
+                        echo "$PASS" | docker login -u "$USER" --password-stdin  // Log into Docker Hub
+                        docker push $DOCKER_IMAGE  // Push Docker image to the registry
                     '''
                 }
             }
