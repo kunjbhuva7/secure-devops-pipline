@@ -7,6 +7,7 @@ pipeline {
         SONAR_TOKEN = credentials('01') // SonarQube token
         SONAR_HOST_URL = 'http://localhost:9000' // SonarQube URL
         DOCKER_IMAGE = 'kunj22/secure-app'
+        DOCKER_CREDENTIALS = credentials('09') // Docker credentials
     }
 
     stages {
@@ -82,10 +83,13 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 withCredentials([usernamePassword(credentialsId: '09', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push ${DOCKER_IMAGE}
-                    '''
+                    script {
+                        // Logging into Docker Hub
+                        sh '''
+                            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                            docker push ${DOCKER_IMAGE}
+                        '''
+                    }
                 }
             }
         }
@@ -136,3 +140,4 @@ pipeline {
         }
     }
 }
+
