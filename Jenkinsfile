@@ -4,8 +4,8 @@ pipeline {
     environment {
         JAVA_HOME = "/opt/homebrew/opt/openjdk"
         PATH = "${JAVA_HOME}/bin:/opt/homebrew/bin:$PATH"
-        SONAR_TOKEN = credentials('Hello-sonarqube')  // Using credentials instead of hardcoding the token
-        SONAR_HOST_URL = 'http://localhost:9000'  // URL of your SonarQube instance
+        SONAR_TOKEN = credentials('Hello-sonarqube') // Using credentials instead of hardcoding the token
+        SONAR_HOST_URL = 'http://localhost:9000' // URL of your SonarQube instance
         DOCKER_IMAGE = 'kunj22/secure-app'
     }
 
@@ -83,7 +83,7 @@ pipeline {
             }
         }
 
-        stage('Push Image') {
+        stage('Push Docker Image') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     sh '''
