@@ -27,7 +27,7 @@ pipeline {
             steps {
                 withSonarQubeEnv('MySonarQube') { // Use the SonarQube server configured in Jenkins
                     sh '''
-                        /opt/homebrew/bin/sonar-scanner \
+                         sonar-scanner \
                         -Dsonar.projectKey=secure-app \
                         -Dsonar.sources=. \
                         -Dsonar.login=sqa_204263854d2c29dd4a2f8041fc627527b7e185b9 \
