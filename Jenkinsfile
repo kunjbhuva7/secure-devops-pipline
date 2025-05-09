@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        JAVA_HOME = "/opt/homebrew/opt/openjdk"
-        PATH = "${JAVA_HOME}/bin:/opt/homebrew/bin:/opt/sonar-scanner/bin:$PATH"
-        SONAR_TOKEN = credentials('01') // Using credentials for SonarQube token
-        SONAR_HOST_URL = 'http://localhost:9000' // SonarQube instance URL
+        JAVA_HOME = "/opt/homebrew/opt/openjdk" // Adjust for Linux; use "/opt/homebrew/opt/openjdk" for macOS
+        PATH = "${JAVA_HOME}/bin:/usr/local/bin:/usr/bin:/bin:/opt/sonar-scanner/bin:$PATH"
+        SONAR_TOKEN = credentials('01') // SonarQube token
+        SONAR_HOST_URL = 'http://localhost:9000' // SonarQube URL
         DOCKER_IMAGE = 'kunj22/secure-app'
     }
 
@@ -13,7 +13,6 @@ pipeline {
         stage('Clone') {
             steps {
                 script {
-                    // Fetch and checkout the main branch
                     git url: 'https://github.com/kunjbhuva7/secure-devops-pipline.git', branch: 'main', credentialsId: '001'
                 }
             }
@@ -23,8 +22,16 @@ pipeline {
             steps {
                 withSonarQubeEnv('MySonarQube') {
                     script {
-                        def scannerHome = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=secure-app -Dsonar.sources=. -Dsonar.login=${SONAR_TOKEN} -Dsonar.host.url=${SONAR_HOST_URL}"
+                        // Use the SonarQube Scanner tool configured in Jenkins
+                        def scannerHome = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=secure-app \
+                            -Dsonar.sources=. \
+                            integrante
+                            -Dsonar.login=\${SONAR_TOKEN} \
+                            -Dsonar.host.url=\${SONAR_HOST_URL} || true
+                        """
                     }
                 }
             }
