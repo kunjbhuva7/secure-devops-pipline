@@ -25,7 +25,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('SonarScanner') { // Use the SonarQube server configured in Jenkins
+                withSonarQubeEnv('MySonarQube') { // Use the SonarQube server configured in Jenkins
                     sh '''
                          sonar-scanner \
                         -Dsonar.projectKey=secure-app \
