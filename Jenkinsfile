@@ -4,7 +4,7 @@ pipeline {
     environment {
         JAVA_HOME = "/opt/homebrew/opt/openjdk"
         PATH = "${JAVA_HOME}/bin:/opt/homebrew/bin:$PATH"
-        SONAR_TOKEN = credentials('Hello-sonarqube')
+        SONAR_TOKEN = credentials('Hello-sonarqube')  // Using credentials instead of hardcoding the token
         SONAR_HOST_URL = 'http://localhost:9000'  // URL of your SonarQube instance
         DOCKER_IMAGE = 'kunj22/secure-app'
     }
@@ -23,15 +23,15 @@ pipeline {
             }
         }
 
-        stage('SonarQube') {
+        stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('MySonarQube') { // Use the SonarQube server configured in Jenkins
                     sh '''
                          sonar-scanner \
                         -Dsonar.projectKey=secure-app \
                         -Dsonar.sources=. \
-                        -Dsonar.login=sqa_204263854d2c29dd4a2f8041fc627527b7e185b9 \
-                        -Dsonar.host.url=http://localhost:9000/
+                        -Dsonar.login=${SONAR_TOKEN} \
+                        -Dsonar.host.url=${SONAR_HOST_URL}
                     '''
                 }
             }
