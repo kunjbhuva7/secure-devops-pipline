@@ -5,7 +5,7 @@ pipeline {
         JAVA_HOME = tool name: 'JDK17', type: 'jdk' // Use Jenkins-managed JDK
         PATH = "${JAVA_HOME}/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:${env.PATH}"
         SONAR_TOKEN = credentials('01') // SonarQube token
-        SONAR_HOST_URL = 'http://localhost:9000' // SonarQube URL
+        SONAR_HOST_URL = 'http://localhost:9000/' // SonarQube URL
         DOCKER_IMAGE = 'kunj22/secure-app:latest'
         DOCKER_CREDENTIALS = credentials('09') // Docker credentials
     }
