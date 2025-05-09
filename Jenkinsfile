@@ -25,7 +25,9 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('MySonarQube') { // Use the SonarQube server configured in Jenkins
+                withSonarQubeEnv('MySonarQube') {
+		    script {
+			def scannerHome = tool 'SonarScanner'
                     sh '''
                          sonar-scanner \
                         -Dsonar.projectKey=secure-app \
@@ -34,7 +36,8 @@ pipeline {
                         -Dsonar.host.url=${SONAR_HOST_URL}
                     '''
                 }
-            }
+	      }
+           }
         }
 
         stage('OWASP Dependency Check') {
