@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        SONAR_SCANNER_HOME = '/opt/sonar-scanner'
-        PATH = "${env.PATH}:${env.SONAR_SCANNER_HOME}/bin"
+        JAVA_HOME = "/opt/homebrew/opt/openjdk"
+        PATH = "${JAVA_HOME}/bin:/opt/homebrew/bin:$PATH"
         SONAR_TOKEN = credentials('01')
         SONAR_HOST_URL = 'http://localhost:9000'  // URL of your SonarQube instance
         DOCKER_IMAGE = 'kunj22/secure-app'
@@ -30,8 +30,8 @@ pipeline {
                         sonar-scanner \
                         -Dsonar.projectKey=secure-app \
                         -Dsonar.sources=. \
-                        -Dsonar.login=${SONAR_TOKEN} \
-                        -Dsonar.host.url=${SONAR_HOST_URL}
+                        -Dsonar.login=sqa_204263854d2c29dd4a2f8041fc627527b7e185b9 \
+                        -Dsonar.host.url=http://localhost:9000/
                     '''
                 }
             }
