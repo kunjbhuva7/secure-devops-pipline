@@ -2,20 +2,24 @@ pipeline {
     agent any
 
     environment {
-        JAVA_HOME = "/usr/lib/jvm/java-17-openjdk" // Linux path
+        JAVA_HOME = "/usr/lib/jvm/java-17-openjdk"
         PATH = "${JAVA_HOME}/bin:/usr/local/bin:/usr/bin:/bin:/opt/sonar-scanner/bin:$PATH"
-        SONAR_TOKEN = credentials('01') // SonarQube token
-        SONAR_HOST_URL = 'http://localhost:9000' // SonarQube URL
+        SONAR_TOKEN = credentials('01')
+        SONAR_HOST_URL = 'http://localhost:9000'
         DOCKER_IMAGE = 'kunj22/secure-app'
         DOCKER_CREDENTIALS = credentials('09')
     }
 
     stages {
+        stage('Check Docker Installed') {
+            steps {
+                sh 'docker --version || (echo "Docker not found!" && exit 1)'
+            }
+        }
+
         stage('Clone') {
             steps {
-                script {
-                    git url: 'https://github.com/kunjbhuva7/secure-devops-pipline.git', branch: 'main', credentialsId: '001'
-                }
+                git url: 'https://github.com/kunjbhuva7/secure-devops-pipline.git', branch: 'main', credentialsId: '001'
             }
         }
 
@@ -28,8 +32,8 @@ pipeline {
                             ${scannerHome}/bin/sonar-scanner \
                             -Dsonar.projectKey=secure-app \
                             -Dsonar.sources=. \
-                            -Dsonar.login=\${SONAR_TOKEN} \
-                            -Dsonar.host.url=\${SONAR_HOST_URL} || true
+                            -Dsonar.login=${SONAR_TOKEN} \
+                            -Dsonar.host.url=${SONAR_HOST_URL} || true
                         """
                     }
                 }
@@ -38,22 +42,31 @@ pipeline {
 
         stage('OWASP Dependency Check') {
             steps {
-                sh 'dependency-check --scan . --format ALL --out reports/ || true'
+                sh '''
+                docker run --rm \
+                    -v $(pwd):/src \
+                    owasp/dependency-check \
+                    --scan /src \
+                    --format ALL \
+                    --out /src/reports || true
+                '''
             }
         }
 
         stage('Build Docker') {
             steps {
-                sh 'docker build -t kunj22/secure-app .'
+                sh 'docker build -t ${DOCKER_IMAGE} .'
             }
         }
 
         stage('Trivy Scan') {
             steps {
-                script {
-                    echo "Running Trivy Scan on Docker image"
-                    sh 'trivy image --format json --output trivy-report.json ${DOCKER_IMAGE} || true'
-                }
+                sh '''
+                docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -v $(pwd):/root/.cache/ \
+                    aquasec/trivy image --format json --output trivy-report.json ${DOCKER_IMAGE} || true
+                '''
             }
         }
 
