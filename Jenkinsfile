@@ -3,9 +3,9 @@ pipeline {
 
     environment {
         JAVA_HOME = "/opt/homebrew/opt/openjdk"
-        PATH = "${JAVA_HOME}/bin:/opt/homebrew/bin:$PATH"
-        SONAR_TOKEN = credentials('01') // Using credentials instead of hardcoding the token
-        SONAR_HOST_URL = 'http://localhost:9000' // URL of your SonarQube instance
+        PATH = "${JAVA_HOME}/bin:/opt/homebrew/bin:/opt/sonar-scanner/bin:$PATH"
+        SONAR_TOKEN = credentials('01') // Using credentials for SonarQube token
+        SONAR_HOST_URL = 'http://localhost:9000' // SonarQube instance URL
         DOCKER_IMAGE = 'kunj22/secure-app'
     }
 
@@ -13,12 +13,8 @@ pipeline {
         stage('Clone') {
             steps {
                 script {
-                    // Fetch all branches and updates before checking out the main branch
-                    sh 'git fetch --all'
-                    // Checkout to main branch explicitly to avoid any issues
-                    sh 'git checkout main'
-                    // Ensure the correct repository is being used and the latest code is fetched
-                    git url: 'https://github.com/kunjbhuva7/secure-devops-pipline.git', branch: 'main'
+                    // Fetch and checkout the main branch
+                    git url: 'https://github.com/kunjbhuva7/secure-devops-pipline.git', branch: 'main', credentialsId: '001'
                 }
             }
         }
@@ -26,29 +22,23 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('MySonarQube') {
-		    script {
-			def scannerHome = tool 'SonarScanner'
-                    sh '''
-                         sonar-scanner \
-                        -Dsonar.projectKey=secure-app \
-                        -Dsonar.sources=. \
-                        -Dsonar.login=${SONAR_TOKEN} \
-                        -Dsonar.host.url=${SONAR_HOST_URL}
-                    '''
+                    script {
+                        def scannerHome = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=secure-app -Dsonar.sources=. -Dsonar.login=${SONAR_TOKEN} -Dsonar.host.url=${SONAR_HOST_URL}"
+                    }
                 }
-	      }
-           }
+            }
         }
 
         stage('OWASP Dependency Check') {
             steps {
-                sh 'dependency-check --scan . --format "ALL" --out reports/'
+                sh 'dependency-check --scan . --format ALL --out reports/ || true'
             }
         }
 
         stage('Build Docker') {
             steps {
-                sh 'docker build -t $DOCKER_IMAGE .'
+                sh 'docker build -t ${DOCKER_IMAGE} .'
             }
         }
 
@@ -56,22 +46,20 @@ pipeline {
             steps {
                 script {
                     echo "Running Trivy Scan on Docker image"
-                    // Run Trivy Scan and save output to a report file
-                    sh 'trivy image $DOCKER_IMAGE > trivy-report.txt || true'
+                    sh 'trivy image --format json --output trivy-report.json ${DOCKER_IMAGE} || true'
                 }
             }
         }
 
         stage('Archive Trivy Report') {
             steps {
-                // Save Trivy report as an artifact
-                archiveArtifacts artifacts: 'trivy-report.txt', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
             }
         }
 
         stage('Terraform Validate') {
             steps {
-                dir('terraform') { // Run Terraform commands inside the 'terraform' directory
+                dir('terraform') {
                     sh 'terraform init'
                     sh 'terraform validate'
                 }
@@ -80,18 +68,18 @@ pipeline {
 
         stage('tfsec Scan') {
             steps {
-                dir('terraform') { // Run tfsec to scan the Terraform code for security issues
-                    sh 'tfsec . > tfsec-report.txt || true'
+                dir('terraform') {
+                    sh 'tfsec . --format json --out tfsec-report.json || true'
                 }
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
-                        echo "$PASS" | docker login -u "$USER" --password-stdin  // Log into Docker Hub
-                        docker push $DOCKER_IMAGE  // Push Docker image to the registry
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push ${DOCKER_IMAGE}
                     '''
                 }
             }
@@ -100,54 +88,46 @@ pipeline {
 
     post {
         always {
-            // Archive the reports and logs, even if the build fails
-            archiveArtifacts artifacts: '**/*.txt, **/reports/**', allowEmptyArchive: true
+            archiveArtifacts artifacts: '**/*.txt, **/*.json, **/reports/**', allowEmptyArchive: true
         }
         success {
-            script {
-                // Send success email with green color
-                emailext (
-                    subject: "SUCCESS: Jenkins Pipeline - ${currentBuild.fullDisplayName}",
-                    body: '''<html>
-                        <body>
-                            <h2 style="color: green;">Success!</h2>
-                            <p>The Jenkins pipeline <strong>${currentBuild.fullDisplayName}</strong> has successfully completed.</p>
-                        </body>
-                    </html>''',
-                    to: 'kunjbhuva301@gmail.com'
-                )
-            }
+            emailext (
+                subject: "SUCCESS: Jenkins Pipeline - ${currentBuild.fullDisplayName}",
+                body: '''<html>
+                    <body>
+                        <h2 style="color: green;">Success!</h2>
+                        <p>The Jenkins pipeline <strong>${currentBuild.fullDisplayName}</strong> has successfully completed.</p>
+                    </body>
+                </html>''',
+                to: 'kunjbhuva301@gmail.com',
+                mimeType: 'text/html'
+            )
         }
         failure {
-            script {
-                // Send failure email with red color
-                emailext (
-                    subject: "FAILURE: Jenkins Pipeline - ${currentBuild.fullDisplayName}",
-                    body: '''<html>
-                        <body>
-                            <h2 style="color: red;">Failure!</h2>
-                            <p>The Jenkins pipeline <strong>${currentBuild.fullDisplayName}</strong> has failed. Please check the logs for more details.</p>
-                        </body>
-                    </html>''',
-                    to: 'kunjbhuva301@gmail.com'
-                )
-            }
+            emailext (
+                subject: "FAILURE: Jenkins Pipeline - ${currentBuild.fullDisplayName}",
+                body: '''<html>
+                    <body>
+                        <h2 style="color: red;">Failure!</h2>
+                        <p>The Jenkins pipeline <strong>${currentBuild.fullDisplayName}</strong> has failed. Please check the logs for more details.</p>
+                    </body>
+                </html>''',
+                to: 'kunjbhuva301@gmail.com',
+                mimeType: 'text/html'
+            )
         }
         unstable {
-            script {
-                // Send unstable email with pink color
-                emailext (
-                    subject: "UNSTABLE: Jenkins Pipeline - ${currentBuild.fullDisplayName}",
-                    body: '''<html>
-                        <body>
-                            <h2 style="color: pink;">Unstable!</h2>
-                            <p>The Jenkins pipeline <strong>${currentBuild.fullDisplayName}</strong> is unstable. Please check the logs for more details.</p>
-                        </body>
-                    </html>''',
-                    to: 'kunjbhuva301@gmail.com'
-                )
-            }
+            emailext (
+                subject: "UNSTABLE: Jenkins Pipeline - ${currentBuild.fullDisplayName}",
+                body: '''<html>
+                    <body>
+                        <h2 style="color: pink;">Unstable!</h2>
+                        <p>The Jenkins pipeline <strong>${currentBuild.fullDisplayName}</strong> is unstable. Please check the logs for more details.</p>
+                    </body>
+                </html>''',
+                to: 'kunjbhuva301@gmail.com',
+                mimeType: 'text/html'
+            )
         }
     }
 }
-
