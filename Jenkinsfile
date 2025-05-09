@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        JAVA_HOME = "/opt/homebrew/opt/openjdk" // Adjust for Linux; use "/opt/homebrew/opt/openjdk" for macOS
+        JAVA_HOME = "/usr/lib/jvm/java-17-openjdk" // Linux path
         PATH = "${JAVA_HOME}/bin:/usr/local/bin:/usr/bin:/bin:/opt/sonar-scanner/bin:$PATH"
         SONAR_TOKEN = credentials('01') // SonarQube token
         SONAR_HOST_URL = 'http://localhost:9000' // SonarQube URL
@@ -22,13 +22,11 @@ pipeline {
             steps {
                 withSonarQubeEnv('MySonarQube') {
                     script {
-                        // Use the SonarQube Scanner tool configured in Jenkins
                         def scannerHome = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                         sh """
                             ${scannerHome}/bin/sonar-scanner \
                             -Dsonar.projectKey=secure-app \
                             -Dsonar.sources=. \
-                            integrante
                             -Dsonar.login=\${SONAR_TOKEN} \
                             -Dsonar.host.url=\${SONAR_HOST_URL} || true
                         """
