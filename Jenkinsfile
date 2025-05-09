@@ -9,11 +9,17 @@ pipeline {
         DOCKER_IMAGE = 'kunj22/secure-app'
         DOCKER_CREDENTIALS = credentials('09')
     }
-
+    
     stages {
         stage('Check Docker Installed') {
             steps {
-                sh 'docker --version || (echo "Docker not found!" && exit 1)'
+                script {
+                    def result = sh(script: 'docker --version', returnStatus: true)
+                    if (result != 0) {
+                        echo 'Docker not found!'
+                        error('Docker must be installed and available to proceed.')
+                    }
+                }
             }
         }
 
