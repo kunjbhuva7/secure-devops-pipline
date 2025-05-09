@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        JAVA_HOME = tool name: 'JDK17', type: 'jdk' // Use Jenkins-managed JDK
+        JAVA_HOME = tool name: 'JDK17', type: 'jdk' // Jenkins-managed JDK
         PATH = "${JAVA_HOME}/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:${env.PATH}"
         SONAR_TOKEN = credentials('01') // SonarQube token
-        SONAR_HOST_URL = 'http://localhost:9000/' // SonarQube URL
+        SONAR_HOST_URL = 'http://localhost:9000' // SonarQube URL
         DOCKER_IMAGE = 'kunj22/secure-app:latest'
         DOCKER_CREDENTIALS = credentials('09') // Docker credentials
     }
@@ -20,18 +20,21 @@ pipeline {
         stage('Parallel Checks') {
             parallel {
                 stage('SonarQube Analysis') {
+                    agent {
+                        docker {
+                            image 'sonarsource/sonar-scanner-cli:latest'
+                            args '-e SONAR_HOST_URL=http://localhost:9000'
+                        }
+                    }
                     steps {
                         withSonarQubeEnv('MySonarQube') {
-                            script {
-                                def scannerHome = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                                sh """
-                                    ${scannerHome}/bin/sonar-scanner \
-                                    -Dsonar.projectKey=secure-app \
-                                    -Dsonar.sources=. \
-                                    -Dsonar.login=\${SONAR_TOKEN} \
-                                    -Dsonar.host.url=\${SONAR_HOST_URL} || true
-                                """
-                            }
+                            sh """
+                                sonar-scanner \
+                                -Dsonar.projectKey=secure-app \
+                                -Dsonar.sources=. \
+                                -Dsonar.login=\${SONAR_TOKEN} \
+                                -Dsonar.host.url=\${SONAR_HOST_URL} || true
+                            """
                         }
                     }
                 }
@@ -92,7 +95,6 @@ pipeline {
         stage('Terraform Validate') {
             steps {
                 script {
-                    // Check if terraform directory exists
                     if (fileExists('terraform')) {
                         dir('terraform') {
                             sh 'terraform init || { echo "Terraform init failed"; exit 1; }'
