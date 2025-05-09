@@ -9,31 +9,45 @@ pipeline {
         DOCKER_IMAGE = 'kunj22/secure-app'
         DOCKER_CREDENTIALS = credentials('09')
     }
-    
+
     stages {
+
         stage('Check Docker Installed') {
+            when { always() }
             steps {
                 script {
-                    def result = sh(script: 'docker --version', returnStatus: true)
-                    if (result != 0) {
-                        echo 'Docker not found!'
-                        error('Docker must be installed and available to proceed.')
+                    def dockerExists = sh(script: 'command -v docker || true', returnStdout: true).trim()
+                    if (!dockerExists) {
+                        echo "Docker not found! Installing Docker..."
+                        sh '''
+                            apt-get update && \
+                            apt-get install -y docker.io && \
+                            systemctl start docker && \
+                            systemctl enable docker
+                        '''
+                    } else {
+                        echo "Docker already installed: ${dockerExists}"
                     }
                 }
             }
         }
 
         stage('Clone') {
+            when { always() }
             steps {
                 git url: 'https://github.com/kunjbhuva7/secure-devops-pipline.git', branch: 'main', credentialsId: '001'
             }
         }
 
         stage('SonarQube Analysis') {
+            when { always() }
             steps {
                 withSonarQubeEnv('MySonarQube') {
                     script {
                         def scannerHome = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                        if (!scannerHome) {
+                            error "SonarQube Scanner not found. Please install it under Global Tools."
+                        }
                         sh """
                             ${scannerHome}/bin/sonar-scanner \
                             -Dsonar.projectKey=secure-app \
@@ -47,42 +61,36 @@ pipeline {
         }
 
         stage('OWASP Dependency Check') {
+            when { always() }
             steps {
-                sh '''
-                docker run --rm \
-                    -v $(pwd):/src \
-                    owasp/dependency-check \
-                    --scan /src \
-                    --format ALL \
-                    --out /src/reports || true
-                '''
+                sh 'dependency-check --scan . --format ALL --out reports/ || true'
             }
         }
 
         stage('Build Docker') {
+            when { always() }
             steps {
                 sh 'docker build -t ${DOCKER_IMAGE} .'
             }
         }
 
         stage('Trivy Scan') {
+            when { always() }
             steps {
-                sh '''
-                docker run --rm \
-                    -v /var/run/docker.sock:/var/run/docker.sock \
-                    -v $(pwd):/root/.cache/ \
-                    aquasec/trivy image --format json --output trivy-report.json ${DOCKER_IMAGE} || true
-                '''
+                echo "Running Trivy Scan on Docker image"
+                sh 'trivy image --format json --output trivy-report.json ${DOCKER_IMAGE} || true'
             }
         }
 
         stage('Archive Trivy Report') {
+            when { always() }
             steps {
                 archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
             }
         }
 
         stage('Terraform Validate') {
+            when { always() }
             steps {
                 dir('terraform') {
                     sh 'terraform init'
@@ -92,6 +100,7 @@ pipeline {
         }
 
         stage('tfsec Scan') {
+            when { always() }
             steps {
                 dir('terraform') {
                     sh 'tfsec . --format json --out tfsec-report.json || true'
@@ -100,6 +109,7 @@ pipeline {
         }
 
         stage('Push Docker Image') {
+            when { always() }
             steps {
                 withCredentials([usernamePassword(credentialsId: '09', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
@@ -146,7 +156,7 @@ pipeline {
                 subject: "UNSTABLE: Jenkins Pipeline - ${currentBuild.fullDisplayName}",
                 body: '''<html>
                     <body>
-                        <h2 style="color: pink;">Unstable!</h2>
+                        <h2 style="color: orange;">Unstable!</h2>
                         <p>The Jenkins pipeline <strong>${currentBuild.fullDisplayName}</strong> is unstable. Please check the logs for more details.</p>
                     </body>
                 </html>''',
