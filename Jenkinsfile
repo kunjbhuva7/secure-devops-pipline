@@ -4,7 +4,7 @@ pipeline {
     environment {
         JAVA_HOME = "/opt/homebrew/opt/openjdk"
         PATH = "${JAVA_HOME}/bin:/opt/homebrew/bin:$PATH"
-        SONAR_TOKEN = credentials('Hello-sonarqube') // Using credentials instead of hardcoding the token
+        SONAR_TOKEN = credentials('01') // Using credentials instead of hardcoding the token
         SONAR_HOST_URL = 'http://localhost:9000' // URL of your SonarQube instance
         DOCKER_IMAGE = 'kunj22/secure-app'
     }
