@@ -14,7 +14,7 @@ pipeline {
         stage('Clone') {
             steps {
                 script {
-                    git url: 'https://github.com/kunjbhuva7/secure-devops-pipline.git', branch: 'main', credentialsId: '001'
+                    git url: 'https://github.com/kunjbhuva7/secure-devops-pipline,git', branch: 'main', credentialsId: '001'
                 }
             }
         }
