@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        JAVA_HOME = "/usr/lib/jvm/java-17-openjdk" // Linux path
+        JAVA_HOME = "/usr/libexec/java_home -v 17" 
         PATH = "${JAVA_HOME}/bin:/usr/local/bin:/usr/bin:/bin:/opt/sonar-scanner/bin:$PATH"
-        SONAR_TOKEN = credentials('01') // SonarQube token
-        SONAR_HOST_URL = 'http://localhost:9000' // SonarQube URL
+        SONAR_TOKEN = credentials('01')
+        SONAR_HOST_URL = 'http://localhost:9000'
         DOCKER_IMAGE = 'kunj22/secure-app'
         DOCKER_CREDENTIALS = credentials('09')
     }
